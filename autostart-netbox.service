@@ -1,0 +1,15 @@
+[Unit]
+Description=Auto Start Netbox
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+ExecStart=/home/devops/autostart-netbox.sh
+
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
