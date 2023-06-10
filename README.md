@@ -2,7 +2,7 @@ Instruction on running the script
 
 1. Clone the git repository locally
 
-git clone https://github.com.abdur
+git clone https://github.com/AbdurroheemSherifdeen/netbox-installer.git
 
 2. change directory to the repository folder in you local environment
 

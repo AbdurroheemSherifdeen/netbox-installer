@@ -1,0 +1,91 @@
+#!/bin/bash
+
+#install mysql
+sudo apt update
+sudo apt install -y postgresql
+psql -V
+
+database_name="$2"
+
+#create database
+sudo -u postgres psql -c "CREATE DATABASE $data_base;"
+
+#create user and set password
+sudo -u postgres psql -c "CREATE USER netbox WITH PASSWORD 'password';"
+
+#set the owner of database to the netbox user
+sudo -u postgres psql -c "CREATE USER netbox WITH PASSWORD 'J5brHrAXFLQSif0K';"
+
+#install redis-server
+sudo apt install -y redis-server
+redis-server -v
+redis-cli ping
+
+#install system packages
+sudo apt install -y python3 python3-pip python3-venv python3-dev build-essential libxml2-dev libxslt1-dev libffi-dev libpq-dev libssl-dev zlib1g-dev
+python3 -V
+
+#download netbox using git repo
+sudo mkdir -p /opt/netbox/
+cd /opt/netbox/
+
+#install git
+sudo apt install -y git
+
+#clone netbox repo
+sudo git clone -b master --depth 1 https://github.com/netbox-community/netbox.git .
+
+#create netbox system user
+sudo adduser --system --group netbox
+sudo chown --recursive netbox /opt/netbox/netbox/media/
+sudo chown --recursive netbox /opt/netbox/netbox/reports/
+sudo chown --recursive netbox /opt/netbox/netbox/scripts/
+
+#configure netbox system user
+cd /opt/netbox/netbox/netbox/
+sudo cp configuration_example.py configuration.py
+
+#generate secrete key
+secret_key=$(python3 ../generate_secret_key.py)
+
+#send key to configuration.py
+echo "Please use the key below as the secret key in this file" >> configuration.py
+echo "SECRET_KEY = '${secret_key}'" >> configuration.py
+echo "Remeber to change the Allow Host to a valid hostname or ip address by which server can be reached" >> configuration.py
+echo "Also change the Database NAME (netbox), USER (netbox) and PASSWORD (password) in the database" >> configuration.py
+echo "Edit the storage section if you will be using a remote file storage" >> configuration.py
+
+#open configuration file
+sudo nano configuration.py
+
+#remote file storage
+sudo sh -c "echo 'django-storages' >> /opt/netbox/local_requirements.txt"
+
+#run upgrade.sh to install netbox
+sudo /opt/netbox/upgrade.sh
+
+#check python version
+python_version=$(python3 --version | awk '{print $2}')
+
+if [[ "$python_version" == "3.8"* ]]; then
+	sudo PYTHON=/usr/bin/python3.8 /opt/netbox/upgrade.sh
+elif [[ "$python_version" == "3.10"* ]]; then
+        sudo PYTHON=/usr/bin/python3.10 /opt/netbox/upgrade.sh
+else
+	echo "Unsupported Python Version: $python_version"
+fi
+
+#activate virtual environment to create super user
+source /opt/netbox/venv/bin/activate
+#create super user
+cd /opt/netbox/netbox
+python3 manage.py createsuperuser
+
+#schedule house keeping
+sudo ln -s /opt/netbox/contrib/netbox-housekeeping.sh /etc/cron.daily/netbox-housekeeping
+
+ip_address=$1
+
+#test your application
+python3 manage.py runserver "$ip_address:8000" --insecure
+
