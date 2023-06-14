@@ -12,7 +12,7 @@ sudo -u postgres psql -c "CREATE DATABASE netbox;"
 sudo -u postgres psql -c "CREATE USER netbox WITH PASSWORD 'password';"
 
 #set the owner of database to the netbox user
-sudo -u postgres psql -c "CREATE USER netbox WITH PASSWORD 'J5brHrAXFLQSif0K';"
+sudo -u postgres psql -c "ALTER DATABASE netbox OWNER TO netbox;"
 
 #install redis-server
 sudo apt install -y redis-server
